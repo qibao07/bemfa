@@ -141,11 +141,23 @@ class BemfaMqtt:
                 )
 
     def _mqtt_on_message(self, _mqtt_client, _userdata, message) -> None:
-        if message.topic == TOPIC_PING:
+        topic = message.topic
+        payload = message.payload.decode()
+
+        if topic == TOPIC_PING:
             if self._ping_receive_timer is not None:
                 self._ping_receive_timer.cancel()
                 self._ping_lost = 0
             return
 
-        if message.topic in self._topic_to_sync:
-            self._topic_to_sync[message.topic].resolve_msg(message.payload.decode())
+        self._hass.bus.fire(
+            "bemfa_mqtt_message",
+            {
+                "topic": topic,
+                "payload": payload,
+            },
+        )
+
+        if topic in self._topic_to_sync:
+            self._topic_to_sync[topic].resolve_msg(payload)
+
